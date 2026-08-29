@@ -232,9 +232,9 @@ code, kbd, pre { font-family: var(--font-mono); }
    on the left, the arbiter's rule down the middle, one clean answer on the
    right. It is inline SVG so it stays crisp and follows the theme. */
 .mark { display: block; height: 100%; width: auto; }
-.mark .mark-rule { fill: var(--text); }
-.mark .cell-pgm { fill: var(--program); }
-.mark .cell-pvw { fill: var(--preview); }
+/* The mark's fills live inline in the <symbol> — see the note beside it in the
+   markup. They cannot be set from here, because <use> puts the cloned content
+   in a shadow tree this stylesheet cannot select into. */
 
 .wordmark {
   font-family: var(--font-display);

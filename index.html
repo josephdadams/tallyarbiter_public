@@ -24,11 +24,11 @@
 <meta name="twitter:image" content="https://www.tallyarbiter.com/img/og-image.png">
 
 <!-- Favicons -->
-<link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png">
-<link rel="manifest" href="/img/site.webmanifest">
-<link rel="mask-icon" href="/img/safari-pinned-tab.svg" color="#004f6c">
+<link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+<link rel="manifest" href="img/site.webmanifest">
+<link rel="mask-icon" href="img/safari-pinned-tab.svg" color="#004f6c">
 <meta name="msapplication-TileColor" content="#004f6c">
 <meta name="theme-color" content="#06131a" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -76,9 +76,13 @@
 
 <!-- Sprite: the logo mark, defined once and reused. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <!-- Fills are inline rather than in the stylesheet on purpose: <use> clones
+       this symbol into a shadow tree that document selectors cannot reach, so
+       class-based fills silently render black. Inline styles do get cloned, and
+       var() still resolves against the theme at the <use> site. -->
   <symbol id="mark" viewBox="0 0 52 64">
     <!-- Left: conflicting tally states arriving from many sources -->
-    <g class="cell-pgm">
+    <g style="fill:var(--program)">
       <rect x="0"     y="4.6"  width="11.5" height="6" rx="0.6"/>
       <rect x="0"     y="11.1" width="11.5" height="6" rx="0.6"/>
       <rect x="12.25" y="11.1" width="11"   height="6" rx="0.6"/>
@@ -86,7 +90,7 @@
       <rect x="0"     y="24.2" width="11.5" height="6" rx="0.6"/>
       <rect x="12.25" y="24.2" width="11"   height="6" rx="0.6"/>
     </g>
-    <g class="cell-pvw">
+    <g style="fill:var(--preview)">
       <rect x="0"     y="30.7" width="11.5" height="6" rx="0.6"/>
       <rect x="12.25" y="30.7" width="11"   height="6" rx="0.6"/>
       <rect x="0"     y="37.2" width="11.5" height="6" rx="0.6"/>
@@ -95,10 +99,10 @@
       <rect x="0"     y="50.3" width="11.5" height="6" rx="0.6"/>
     </g>
     <!-- The arbiter's rule -->
-    <rect class="mark-rule" x="25.25" y="0" width="0.7" height="63.1"/>
+    <rect style="fill:var(--text)" x="25.25" y="0" width="0.7" height="63.1"/>
     <!-- Right: one decided answer per bus -->
-    <rect class="cell-pgm" x="28.1" y="11.25" width="23.75" height="12.5" rx="0.8"/>
-    <rect class="cell-pvw" x="28.1" y="37.25" width="23.75" height="13"   rx="0.8"/>
+    <rect style="fill:var(--program)" x="28.1" y="11.25" width="23.75" height="12.5" rx="0.8"/>
+    <rect style="fill:var(--preview)" x="28.1" y="37.25" width="23.75" height="13"   rx="0.8"/>
   </symbol>
 </svg>
 
@@ -326,7 +330,7 @@
         </g>
         <g>
           <rect class="f-box" x="8" y="340" width="212" height="72" rx="10" stroke-dasharray="5 5"/>
-          <text class="f-label" x="28" y="368" font-size="15">&hellip;and 15 more</text>
+          <text class="f-label" x="28" y="368" font-size="15">&hellip;and 22 more</text>
           <text class="f-sub"   x="28" y="390" font-size="12.5">Unlimited sources, mixed freely</text>
         </g>
 
@@ -598,7 +602,7 @@
 
     <header class="section-head">
       <span class="eyebrow">Supported gear</span>
-      <h2>Sixteen source types, and counting</h2>
+      <h2>Twenty-five source types, and counting</h2>
       <p>
         If your switcher speaks TSL UMD 3.1 or 5.0, it already works &mdash; even if
         it isn't named here. New source types arrive regularly, often because
@@ -609,38 +613,42 @@
     <div class="systems">
 
       <div class="system reveal">
-        <h3>Analog Way <span>2 types</span></h3>
+        <h3>Ross Video <span>6 types</span></h3>
         <ul>
-          <li>Ascender 16 / 32 / 48 &mdash; 4K</li>
-          <li>NeXtage 08 / 16 &mdash; 4K</li>
-          <li>LivePremier</li>
-          <li>Aquilon</li>
-          <li class="is-note">LivePremier and Aquilon need firmware 6.1.60 or later.</li>
+          <li>Carbonite</li>
+          <li>Carbonite Black SD/HD</li>
+          <li>Carbonite Black Solo</li>
+          <li>Carbonite Ultra</li>
+          <li>Graphite</li>
+          <li>Vision</li>
+          <li class="is-note">Each Carbonite variant is its own source type, so tally can follow a specific bus (ME, MiniME, Aux) rather than the switcher's OnAir setting. Vision connects over Contribution Tally.</li>
         </ul>
       </div>
 
       <div class="system reveal">
         <h3>Blackmagic Design <span>2 types</span></h3>
         <ul>
-          <li>ATEM Mini &middot; Pro &middot; Pro ISO &middot; Extreme</li>
-          <li>ATEM Television Studio &amp; Pro HD / 4K</li>
-          <li>ATEM 1 / 2 / 4 M/E Production Studio</li>
-          <li>ATEM Constellation 8K</li>
-          <li>Smart VideoHub 12&times;12 &rarr; 40&times;40</li>
-          <li>Universal VideoHub 72&times;72 &amp; 288&times;288</li>
-          <li class="is-note">The ATEM allows only 5 simultaneous connections.</li>
+          <li>ATEM &mdash; all models</li>
+          <li>Smart &amp; Universal VideoHub</li>
+          <li class="is-note">ATEM uses port 9910 and allows only 5 simultaneous connections. VideoHub uses 9990; any destination can be treated as a preview bus, a program bus, or both.</li>
         </ul>
       </div>
 
       <div class="system reveal">
-        <h3>Ross Video <span>2 types</span></h3>
+        <h3>Analog Way <span>2 types</span></h3>
         <ul>
-          <li>Carbonite &middot; Black &middot; Black Solo &middot; Ultra</li>
-          <li>Acuity</li>
-          <li>Graphite</li>
-          <li>TouchDrive</li>
-          <li>Vision</li>
-          <li class="is-note">Carbonite gets per-bus handling; Vision uses Contribution Tally.</li>
+          <li>Livecore &mdash; Ascender, NeXtage</li>
+          <li>LivePremier / Aquilon</li>
+          <li class="is-note">Livecore uses port 10600. LivePremier and Aquilon need firmware 6.1.60 or later and connect on the Web RCS port.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Roland <span>2 types</span></h3>
+        <ul>
+          <li>Smart Tally &mdash; V-60HD, V-80HD, XS-62S</li>
+          <li>VR &mdash; VR-50HD-MKII</li>
+          <li class="is-note">Smart Tally takes a username and password only if the switcher has web authentication enabled.</li>
         </ul>
       </div>
 
@@ -650,16 +658,15 @@
           <li>OBS Studio</li>
           <li>StudioCoast vMix</li>
           <li>Riedel SimplyLive</li>
-          <li class="is-note">OBS v28+ includes obs-websocket; watch for a port clash on 4455.</li>
+          <li class="is-note">OBS v28+ bundles obs-websocket, which defaults to port 4455 &mdash; watch for a clash. vMix uses 8099.</li>
         </ul>
       </div>
 
       <div class="system reveal">
         <h3>NewTek <span>1 type</span></h3>
         <ul>
-          <li>Tricaster TC1</li>
-          <li>Tricaster Mini</li>
-          <li class="is-note">Any NewTek product supporting their Tally over Ethernet protocol.</li>
+          <li>Tricaster</li>
+          <li class="is-note">Uses port 5951. Works with any Tricaster supporting NewTek's tally over Ethernet.</li>
         </ul>
       </div>
 
@@ -667,18 +674,17 @@
         <h3>Panasonic <span>1 type</span></h3>
         <ul>
           <li>AV-HS410</li>
-          <li>AV-HS6000</li>
-          <li class="is-note">Requires multicast on the same subnet as Tally Arbiter.</li>
+          <li class="is-note">Uses port 60020 and requires multicast, so the switcher and Tally Arbiter must share a subnet. Other Panasonic switchers connect over TSL instead.</li>
         </ul>
       </div>
 
       <div class="system reveal">
-        <h3>Roland <span>2 types</span></h3>
+        <h3>DataVideo <span>1 type</span></h3>
         <ul>
-          <li>V-60HD</li>
-          <li>XS-62S</li>
-          <li>VR-50HD-MKII</li>
-          <li class="is-note">Plus any Roland product offering Smart Tally.</li>
+          <li>SE-650</li>
+          <li>SE-700</li>
+          <li>SE-1200MU / HS-1300</li>
+          <li class="is-note">Over the DVIP protocol.</li>
         </ul>
       </div>
 
@@ -691,39 +697,36 @@
       </div>
 
       <div class="system reveal">
-        <h3>DataVideo <span>1 type</span></h3>
+        <h3>Open protocols <span>6 types</span></h3>
         <ul>
-          <li>DataVideo IP tally</li>
-        </ul>
-      </div>
-
-      <div class="system reveal">
-        <h3>FOR-A <span>via TSL</span></h3>
-        <ul>
-          <li>HVS-490</li>
-          <li>HVS-1200 &middot; 2000 &middot; 6000</li>
-          <li class="is-note">Any FOR-A product supporting TSL UMD 5.0 over Ethernet.</li>
-        </ul>
-      </div>
-
-      <div class="system reveal">
-        <h3>Open protocols <span>3 types</span></h3>
-        <ul>
-          <li>TSL UMD 3.1 &mdash; UDP or TCP</li>
-          <li>TSL UMD 5.0 &mdash; UDP or TCP</li>
+          <li>TSL UMD 3.1 &mdash; UDP</li>
+          <li>TSL UMD 3.1 &mdash; TCP</li>
+          <li>TSL UMD 5.0 &mdash; UDP</li>
+          <li>TSL UMD 5.0 &mdash; TCP</li>
           <li>Open Sound Control (OSC)</li>
-          <li>Incoming webhooks</li>
-          <li class="is-note">Anything that can send a UDP packet or an HTTP request can be a source.</li>
+          <li>Incoming webhook</li>
+          <li class="is-note">Each transport is its own source type. Anything that can send a UDP packet, a TCP stream or an HTTP request can drive tally.</li>
         </ul>
       </div>
 
       <div class="system reveal">
-        <h3>Not listed? <span>&nbsp;</span></h3>
+        <h3>Anything else that speaks TSL <span>via TSL</span></h3>
+        <ul>
+          <li>FOR-A HVS series</li>
+          <li>Ross Acuity, TouchDrive</li>
+          <li>Panasonic AV-HS6000</li>
+          <li>Streamstar</li>
+          <li class="is-note">These have no dedicated source type, but emit TSL UMD 3.1 or 5.0, which Tally Arbiter accepts directly.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Still not listed? <span>&nbsp;</span></h3>
         <ul>
           <li class="is-note" style="font-style:normal">
-            Most switchers can emit TSL UMD, which Tally Arbiter accepts directly.
-            If yours can't, open an issue &mdash; new source types are added
-            regularly, and the source interface is small enough to write yourself.
+            Open an issue &mdash; new source types are added regularly, and the
+            source interface is small enough to write one yourself if you'd
+            rather. There's a template in the repository to start from.
           </li>
         </ul>
         <a class="btn btn--ghost btn--sm" style="margin-top:14px" href="https://github.com/josephdadams/TallyArbiter/issues">Request a switcher</a>
