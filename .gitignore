@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Editors
+*.swp
+*~
+.idea/
+.vscode/
+
+# Assets staged for deletion: the old BootstrapMade theme's vendor libraries
+# and decoration images, left on disk after the 2026 rebuild. Not part of the
+# site. Delete the folder when you no longer want them around.
+_unused/

@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Tally Arbiter — Open source tally lights for any camera, any switcher</title>
+<meta name="description" content="Tally Arbiter aggregates tally data from ATEM, Ross, vMix, OBS, Tricaster, TSL and more, then drives phones, ESP32 lights, blink(1), GPO and relays. Free, open source, MIT licensed.">
+
+<link rel="canonical" href="https://www.tallyarbiter.com/">
+
+<!-- Open Graph / Twitter -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tally Arbiter">
+<meta property="og:url" content="https://www.tallyarbiter.com/">
+<meta property="og:title" content="Tally Arbiter — Open source tally lights for any camera, any switcher">
+<meta property="og:description" content="Combine tally from every switcher you own into one truthful answer, then send it to phones, ESP32 lights, GPO and relays. Free and MIT licensed.">
+<meta property="og:image" content="https://www.tallyarbiter.com/img/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tally Arbiter — Open source tally lights for any camera, any switcher">
+<meta name="twitter:description" content="Combine tally from every switcher you own into one truthful answer, then send it to phones, ESP32 lights, GPO and relays.">
+<meta name="twitter:image" content="https://www.tallyarbiter.com/img/og-image.png">
+
+<!-- Favicons -->
+<link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png">
+<link rel="manifest" href="/img/site.webmanifest">
+<link rel="mask-icon" href="/img/safari-pinned-tab.svg" color="#004f6c">
+<meta name="msapplication-TileColor" content="#004f6c">
+<meta name="theme-color" content="#06131a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+
+<!-- Set the theme before first paint so there is no flash of the wrong one. -->
+<script>
+  (function () {
+    document.documentElement.classList.add('js');
+    try {
+      var saved = localStorage.getItem('ta-theme');
+      if (saved === 'light' || saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', saved);
+      }
+    } catch (e) { /* private mode — fall back to the media query */ }
+  })();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Tally Arbiter",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "macOS, Windows, Linux, Raspberry Pi, Docker",
+  "url": "https://www.tallyarbiter.com/",
+  "downloadUrl": "https://github.com/josephdadams/TallyArbiter/releases/latest",
+  "softwareVersion": "3.3.0",
+  "license": "https://opensource.org/licenses/MIT",
+  "description": "A camera tally light system that listens to and aggregates tally data from multiple video switchers and protocols, arbitrates Preview and Program states, and drives a wide range of tally output devices.",
+  "author": { "@type": "Person", "name": "Joseph Adams", "url": "https://techministry.blog" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+</head>
+
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- Sprite: the logo mark, defined once and reused. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="mark" viewBox="0 0 52 64">
+    <!-- Left: conflicting tally states arriving from many sources -->
+    <g class="cell-pgm">
+      <rect x="0"     y="4.6"  width="11.5" height="6" rx="0.6"/>
+      <rect x="0"     y="11.1" width="11.5" height="6" rx="0.6"/>
+      <rect x="12.25" y="11.1" width="11"   height="6" rx="0.6"/>
+      <rect x="0"     y="17.6" width="11.5" height="6" rx="0.6"/>
+      <rect x="0"     y="24.2" width="11.5" height="6" rx="0.6"/>
+      <rect x="12.25" y="24.2" width="11"   height="6" rx="0.6"/>
+    </g>
+    <g class="cell-pvw">
+      <rect x="0"     y="30.7" width="11.5" height="6" rx="0.6"/>
+      <rect x="12.25" y="30.7" width="11"   height="6" rx="0.6"/>
+      <rect x="0"     y="37.2" width="11.5" height="6" rx="0.6"/>
+      <rect x="0"     y="43.8" width="11.5" height="6" rx="0.6"/>
+      <rect x="12.25" y="43.8" width="11"   height="6" rx="0.6"/>
+      <rect x="0"     y="50.3" width="11.5" height="6" rx="0.6"/>
+    </g>
+    <!-- The arbiter's rule -->
+    <rect class="mark-rule" x="25.25" y="0" width="0.7" height="63.1"/>
+    <!-- Right: one decided answer per bus -->
+    <rect class="cell-pgm" x="28.1" y="11.25" width="23.75" height="12.5" rx="0.8"/>
+    <rect class="cell-pvw" x="28.1" y="37.25" width="23.75" height="13"   rx="0.8"/>
+  </symbol>
+</svg>
+
+<!--==========================================================================
+  Header
+===========================================================================-->
+<header class="site-header" id="site-header">
+  <div class="wrap">
+
+    <a class="logo-lockup" href="#top" aria-label="Tally Arbiter — home">
+      <svg class="mark" viewBox="0 0 52 64" aria-hidden="true"><use href="#mark"></use></svg>
+      <span class="wordmark">Tally Arbiter</span>
+    </a>
+
+    <nav class="nav" id="nav" aria-label="Main">
+      <ul class="nav-list">
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#outputs">Outputs</a></li>
+        <li><a href="#supported">Supported</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#videos">Videos</a></li>
+        <li><a href="https://josephdadams.github.io/TallyArbiter/docs/intro">Docs</a></li>
+      </ul>
+    </nav>
+
+    <div class="header-actions">
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch between light and dark theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 1 1 9.4 3.5a7 7 0 0 0 11.1 11.1z"/></svg>
+      </button>
+
+      <a class="btn btn--primary btn--sm" href="https://github.com/josephdadams/TallyArbiter">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.6 5.6.6 12a11.4 11.4 0 0 0 7.8 10.8c.6.1.8-.2.8-.6v-2c-3.2.7-3.8-1.4-3.8-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.2 1.7 1.2 1 1.7 2.7 1.2 3.4.9.1-.7.4-1.2.7-1.5-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.3 11.3 0 0 1 6 0C17.6 4.7 18.6 5 18.6 5c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6A11.4 11.4 0 0 0 23.4 12C23.4 5.6 18.3.5 12 .5z"/></svg>
+        <span>GitHub</span>
+      </a>
+
+      <button class="icon-btn nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+
+  </div>
+</header>
+
+<main id="main">
+<span id="top"></span>
+
+<!--==========================================================================
+  Hero
+===========================================================================-->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+
+      <div>
+        <a class="version-pill" href="https://github.com/josephdadams/TallyArbiter/releases/latest">
+          <b>v3.3</b>
+          <span>Desktop app, Docker and npm builds &rarr;</span>
+        </a>
+
+        <h1>Every switcher you own, one&nbsp;answer your camera op can&nbsp;trust.</h1>
+
+        <p class="hero-lede">
+          Tally Arbiter listens to tally data from all of your video switchers at
+          once, arbitrates <span class="hl-pgm">Program</span> and
+          <span class="hl-pvw">Preview</span> across every source a camera is
+          assigned to, and pushes the result to phones, ESP32 lights, GPO pins
+          and relays in real time.
+        </p>
+
+        <div class="hero-cta">
+          <a class="btn btn--primary" href="#install">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
+            <span>Download free</span>
+          </a>
+          <a class="btn btn--ghost" href="https://josephdadams.github.io/TallyArbiter/docs/intro">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 16.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
+            <span>Read the docs</span>
+          </a>
+        </div>
+
+        <ul class="hero-meta">
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+            Free and MIT licensed
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+            No per-seat cost, no cloud account
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+            Runs happily on a Raspberry&nbsp;Pi
+          </li>
+        </ul>
+      </div>
+
+      <!-- A miniature of the Producer view, cycling through real bus states. -->
+      <div class="tally-panel" aria-hidden="true">
+        <div class="tally-panel-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="label">Producer</span>
+          <span class="live">Live</span>
+        </div>
+
+        <ul class="tally-list" id="tally-demo">
+          <li class="tally-row" data-state="clear">
+            <span class="tally-lamp"></span>
+            <span class="name">Camera 1</span>
+            <span class="state">Clear</span>
+            <span class="src">ATEM</span>
+          </li>
+          <li class="tally-row" data-state="clear">
+            <span class="tally-lamp"></span>
+            <span class="name">Camera 2</span>
+            <span class="state">Clear</span>
+            <span class="src">ATEM + TSL</span>
+          </li>
+          <li class="tally-row" data-state="clear">
+            <span class="tally-lamp"></span>
+            <span class="name">Camera 3</span>
+            <span class="state">Clear</span>
+            <span class="src">Carbonite</span>
+          </li>
+          <li class="tally-row" data-state="clear">
+            <span class="tally-lamp"></span>
+            <span class="name">Graphics</span>
+            <span class="state">Clear</span>
+            <span class="src">vMix</span>
+          </li>
+        </ul>
+
+        <div class="tally-panel-foot">
+          <span>4 devices &middot; 3 sources</span>
+          <span>12 listeners connected</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!--==========================================================================
+  Brand strip
+===========================================================================-->
+<div class="strip">
+  <div class="wrap">
+    <p class="strip-title">Speaks to gear you already have</p>
+    <ul class="strip-items">
+      <li>Blackmagic ATEM</li>
+      <li>Ross Carbonite</li>
+      <li>vMix</li>
+      <li>OBS Studio</li>
+      <li>NewTek Tricaster</li>
+      <li>Panasonic</li>
+      <li>Roland</li>
+      <li>Analog Way</li>
+      <li>Grass Valley</li>
+      <li>Riedel SimplyLive</li>
+      <li>DataVideo</li>
+      <li>TSL UMD 3.1 / 5.0</li>
+    </ul>
+  </div>
+</div>
+
+<!--==========================================================================
+  How it works
+===========================================================================-->
+<section class="section" id="how">
+  <div class="wrap">
+
+    <header class="section-head">
+      <span class="eyebrow">How it works</span>
+      <h2>The hard part isn't the light. It's the disagreement.</h2>
+      <p>
+        A camera can be live on one switcher and in preview on another. Tally Arbiter
+        subscribes to every source at once, resolves the conflict, and gives each
+        device a single state &mdash; so the operator behind the camera is never guessing.
+      </p>
+    </header>
+
+    <div class="flow reveal">
+      <p class="flow-hint">Scroll the diagram sideways to follow the whole path &rarr;</p>
+      <div class="flow-scroll">
+      <svg class="flow-svg" viewBox="0 0 1000 470" role="img" aria-labelledby="flow-title flow-desc">
+        <title id="flow-title">How Tally Arbiter resolves tally states</title>
+        <desc id="flow-desc">
+          Four kinds of sources send bus states into Tally Arbiter. Tally Arbiter
+          arbitrates them into one state per device — here Camera 2 resolves to
+          Program because at least one assigned source has it on program — and
+          that single state fans out to every connected tally output.
+        </desc>
+
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path class="f-arrow" d="M0 0L10 5L0 10z"/>
+          </marker>
+        </defs>
+
+        <!-- Column captions -->
+        <text class="f-cap" x="8"   y="26">Sources</text>
+        <text class="f-cap" x="280" y="26">Arbitration</text>
+        <text class="f-cap" x="540" y="26">Device state</text>
+        <text class="f-cap" x="780" y="26">Outputs</text>
+
+        <!-- ---- Column 1: sources ---- -->
+        <g>
+          <rect class="f-box" x="8" y="52" width="212" height="72" rx="10"/>
+          <rect x="8" y="52" width="4" height="72" rx="2" fill="var(--program)"/>
+          <text class="f-label" x="28" y="80" font-size="15">Blackmagic ATEM</text>
+          <text class="f-sub"   x="28" y="102" font-size="12.5">Cam 2 on ME1 program</text>
+        </g>
+        <g>
+          <rect class="f-box" x="8" y="148" width="212" height="72" rx="10"/>
+          <rect x="8" y="148" width="4" height="72" rx="2" fill="var(--preview)"/>
+          <text class="f-label" x="28" y="176" font-size="15">Ross Carbonite &middot; TSL</text>
+          <text class="f-sub"   x="28" y="198" font-size="12.5">Cam 2 on preview</text>
+        </g>
+        <g>
+          <rect class="f-box" x="8" y="244" width="212" height="72" rx="10"/>
+          <rect x="8" y="244" width="4" height="72" rx="2" fill="var(--border-strong)"/>
+          <text class="f-label" x="28" y="272" font-size="15">OBS Studio</text>
+          <text class="f-sub"   x="28" y="294" font-size="12.5">Cam 2 not in use</text>
+        </g>
+        <g>
+          <rect class="f-box" x="8" y="340" width="212" height="72" rx="10" stroke-dasharray="5 5"/>
+          <text class="f-label" x="28" y="368" font-size="15">&hellip;and 15 more</text>
+          <text class="f-sub"   x="28" y="390" font-size="12.5">Unlimited sources, mixed freely</text>
+        </g>
+
+        <!-- ---- Feeds into the arbiter ---- -->
+        <path class="f-line-pgm" d="M220 88 C250 88 250 232 280 232" marker-end="url(#ar)"/>
+        <path class="f-line-pvw" d="M220 184 C250 184 250 232 280 232" marker-end="url(#ar)"/>
+        <path class="f-line"     d="M220 280 C250 280 250 232 280 232" marker-end="url(#ar)"/>
+        <path class="f-line"     d="M220 376 C250 376 250 232 280 232" marker-end="url(#ar)" stroke-dasharray="5 5"/>
+
+        <!-- ---- Column 2: the arbiter ---- -->
+        <rect class="f-box-brand" x="280" y="132" width="200" height="200" rx="14"/>
+        <text class="f-label" x="380" y="176" font-size="16" text-anchor="middle">Tally Arbiter</text>
+        <line x1="308" y1="194" x2="452" y2="194" stroke="var(--brand)" stroke-width="1" opacity="0.4"/>
+        <text class="f-sub" x="380" y="222" font-size="12.5" text-anchor="middle">Camera 2 is assigned to</text>
+        <text class="f-sub" x="380" y="240" font-size="12.5" text-anchor="middle">all three sources.</text>
+        <text class="f-sub" x="380" y="272" font-size="12.5" text-anchor="middle">Program on any one of</text>
+        <text class="f-sub" x="380" y="290" font-size="12.5" text-anchor="middle">them means program.</text>
+
+        <path class="f-line" d="M480 232 H540" marker-end="url(#ar)"/>
+
+        <!-- ---- Column 3: resolved device state ---- -->
+        <rect x="540" y="172" width="180" height="120" rx="12" fill="color-mix(in srgb, var(--program) 12%, var(--surface))" stroke="var(--program)" stroke-width="2"/>
+        <circle cx="580" cy="212" r="11" fill="var(--program)"/>
+        <text class="f-label" x="602" y="218" font-size="15">Camera 2</text>
+        <text x="570" y="258" font-size="21" font-weight="700" letter-spacing="0.1em"
+              font-family="Jost, sans-serif" fill="var(--accent-text-program)">PROGRAM</text>
+
+        <path class="f-line" d="M720 232 H780" marker-end="url(#ar)"/>
+
+        <!-- ---- Column 4: outputs ---- -->
+        <g>
+          <rect class="f-box" x="780" y="52" width="212" height="52" rx="9"/>
+          <text class="f-label" x="800" y="76"  font-size="14">Phone or tablet browser</text>
+          <text class="f-sub"   x="800" y="93"  font-size="11.5">/tally on any device</text>
+        </g>
+        <g>
+          <rect class="f-box" x="780" y="116" width="212" height="52" rx="9"/>
+          <text class="f-label" x="800" y="140" font-size="14">M5Stick &middot; M5Atom &middot; ESP32</text>
+          <text class="f-sub"   x="800" y="157" font-size="11.5">Battery powered, over Wi-Fi</text>
+        </g>
+        <g>
+          <rect class="f-box" x="780" y="180" width="212" height="52" rx="9"/>
+          <text class="f-label" x="800" y="204" font-size="14">blink(1) USB light</text>
+          <text class="f-sub"   x="800" y="221" font-size="11.5">On a Pi Zero W, wirelessly</text>
+        </g>
+        <g>
+          <rect class="f-box" x="780" y="244" width="212" height="52" rx="9"/>
+          <text class="f-label" x="800" y="268" font-size="14">GPO pins &amp; relays</text>
+          <text class="f-sub"   x="800" y="285" font-size="11.5">Straight into camera CCUs</text>
+        </g>
+        <g>
+          <rect class="f-box" x="780" y="308" width="212" height="52" rx="9"/>
+          <text class="f-label" x="800" y="332" font-size="14">TSL &amp; vMix emulation</text>
+          <text class="f-sub"   x="800" y="349" font-size="11.5">Drive multiviewers and UMDs</text>
+        </g>
+        <g>
+          <rect class="f-box" x="780" y="372" width="212" height="52" rx="9"/>
+          <text class="f-label" x="800" y="396" font-size="14">Webhooks, OSC, MQTT</text>
+          <text class="f-sub"   x="800" y="413" font-size="11.5">Anything else you can script</text>
+        </g>
+      </svg>
+      </div>
+    </div>
+
+    <ol class="flow-steps">
+      <li>
+        <h3>Add your sources</h3>
+        <p>Point Tally Arbiter at each switcher or protocol. Mix as many as you like &mdash; an ATEM, a Carbonite over TSL and an OBS machine can all run side by side.</p>
+      </li>
+      <li>
+        <h3>Define your devices</h3>
+        <p>A device is a real thing in the room: Camera 2, the graphics operator, the stage manager. Map it to the inputs that represent it on each source.</p>
+      </li>
+      <li>
+        <h3>Let it arbitrate</h3>
+        <p>Tally Arbiter watches every bus and resolves the states into one answer per device, so conflicting sources never leave an operator with a wrong light.</p>
+      </li>
+      <li>
+        <h3>Light it up</h3>
+        <p>Assign listener clients, actions and protocol outputs to each device. Reassign any listener from the browser mid-show without touching the hardware.</p>
+      </li>
+    </ol>
+
+  </div>
+</section>
+
+<!--==========================================================================
+  Features
+===========================================================================-->
+<section class="section section--alt" id="features">
+  <div class="wrap">
+
+    <header class="section-head">
+      <span class="eyebrow">Features</span>
+      <h2>Built for real productions, not demos</h2>
+      <p>Everything below ships in the box, under the MIT license, with no paid tier waiting behind it.</p>
+    </header>
+
+    <div class="grid grid--3">
+
+      <article class="card reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97 6 6 0 0 0-11.6-1.6A4 4 0 0 0 6.5 19z"/></svg></span>
+        <h3>Cloud relay</h3>
+        <p>Push tally from a locked-down production network to a server in the cloud, so remote operators and volunteers can see states without a VPN or port forwarding.</p>
+      </article>
+
+      <article class="card reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h4l3-7 3 14 3-7h3"/></svg></span>
+        <h3>Actions on state change</h3>
+        <p>Fire an outgoing webhook, TCP or UDP string, OSC message, RossTalk command, Ember+ or TSL packet whenever a device enters or leaves Program or Preview.</p>
+      </article>
+
+      <article class="card reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3M7 9h4M7 13h6"/></svg></span>
+        <h3>Producer view</h3>
+        <p>A dark, password-protected page showing every device and its live state at a glance &mdash; designed to sit open on a monitor for the whole service or show.</p>
+      </article>
+
+      <article class="card reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.3-.6L3 21l1.8-5.2A8.3 8.3 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span>
+        <h3>Messaging to the floor</h3>
+        <p>Send messages between the server, producers and supported tally clients. Flash any listener to get an operator's attention or work out which light is which.</p>
+      </article>
+
+      <article class="card reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M4 7h16v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM9 12h6M9 16h6"/></svg></span>
+        <h3>Protocol conversion</h3>
+        <p>Take tally in from anything and send it back out as TSL 3.1, or emulate a vMix server so existing vMix tally clients and multiviewers just work.</p>
+      </article>
+
+      <article class="card reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/><circle cx="12" cy="12" r="3"/></svg></span>
+        <h3>MQTT for automation</h3>
+        <p>Publish tally states to Home Assistant, openHAB or any MQTT broker, and let the rest of your building react &mdash; door signs, room lights, whatever you dream up.</p>
+      </article>
+
+      <article class="card reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h4v4H7zM13 8h4v4h-4zM7 14h4v3H7zM13 14h4v3h-4z"/></svg></span>
+        <h3>Stream Deck control</h3>
+        <p>The Bitfocus Companion module shows live tally feedback on your Stream Deck keys and lets you ping or flash any connected listener from the surface.</p>
+      </article>
+
+      <article class="card reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg></span>
+        <h3>REST API &amp; websockets</h3>
+        <p>A documented HTTP API and socket interface, so you can build your own listener client, dashboard or integration in whatever language you like.</p>
+      </article>
+
+      <article class="card reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 4v5c0 4.4-3 8.3-7.5 9.5C7.5 20.3 4.5 16.4 4.5 12V7z"/><path d="M9.5 12l1.8 1.8 3.4-3.6"/></svg></span>
+        <h3>Unlimited everything</h3>
+        <p>No licence keys, no device count, no seat limits. Add as many sources, devices and listener clients as your network can carry.</p>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!--==========================================================================
+  Tally outputs
+===========================================================================-->
+<section class="section" id="outputs">
+  <div class="wrap">
+
+    <header class="section-head">
+      <span class="eyebrow">Tally outputs</span>
+      <h2>Pick the light that fits the budget</h2>
+      <p>
+        Listener clients open a websocket to the server and update instantly. Every
+        one of these is open source, and most cost less than a takeaway lunch.
+      </p>
+    </header>
+
+    <div class="grid grid--4">
+
+      <article class="card card--link reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 5.5h3"/></svg></span>
+        <h3><a href="https://josephdadams.github.io/TallyArbiter/docs/usage/sections/listener-clients">Phone or tablet</a></h3>
+        <p>Open <code>/tally</code> in any browser and pick a device. Free, instant, and everyone already owns the hardware.</p>
+        <span class="card-tag">$0</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon card-icon--pgm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="16" height="10" rx="2"/><path d="M9 8V5.5A2.5 2.5 0 0 1 11.5 3h1A2.5 2.5 0 0 1 15 5.5V8"/></svg></span>
+        <h3><a href="https://github.com/josephdadams/TallyArbiter/tree/HEAD/listener_clients/blink1-listener">blink(1) USB</a></h3>
+        <p>A USB light driven by a Python script. Run it on a Pi Zero W and it becomes a wireless tally for a graphics or playback operator.</p>
+        <span class="card-tag">USB</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon card-icon--pvw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M9.5 7h5v5h-5z"/></svg></span>
+        <h3><a href="https://github.com/josephdadams/TallyArbiter/tree/HEAD/listener_clients/m5stickc-listener">M5StickC</a></h3>
+        <p>A pocket-sized ESP32 with a colour screen and a battery. Clip one to each camera and you have portable wireless tally.</p>
+        <span class="card-tag">ESP32</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon card-icon--pvw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M9.5 6.5h5v6h-5z"/><path d="M10 16h4"/></svg></span>
+        <h3><a href="https://github.com/josephdadams/TallyArbiter/tree/HEAD/listener_clients/M5StickS3">M5StickS3</a></h3>
+        <p>The newer ESP32-S3 version of the Stick, with a brighter display and more headroom.</p>
+        <span class="card-tag">ESP32-S3</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon card-icon--pgm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h2v2H8zM11 8h2v2h-2zM14 8h2v2h-2zM8 11h2v2H8zM11 11h2v2h-2zM14 11h2v2h-2zM8 14h2v2H8zM11 14h2v2h-2zM14 14h2v2h-2z" fill="currentColor" stroke="none"/></svg></span>
+        <h3><a href="https://github.com/josephdadams/TallyArbiter/tree/HEAD/listener_clients/M5AtomMatrix-listener">M5Atom Matrix</a></h3>
+        <p>A 5&times;5 LED matrix in a one-inch cube. Add a Tailbat and you get ultra-bright, ultra-portable, ultra-cheap tally.</p>
+        <span class="card-tag">ESP32</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon card-icon--pvw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h18"/><circle cx="6.5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="17.5" cy="12" r="2"/></svg></span>
+        <h3><a href="https://github.com/josephdadams/TallyArbiter/tree/HEAD/listener_clients/esp32-neopixel-listener">ESP32 &amp; NeoPixel</a></h3>
+        <p>Generic ESP32 boards driving NeoPixel strips &mdash; the option when you want a big, bright light visible from across the room. An ESP32-C3 build is included too.</p>
+        <span class="card-tag">ESP32 / C3</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon card-icon--pvw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10.5h10M7 13.5h6"/></svg></span>
+        <h3><a href="https://github.com/josephdadams/TallyArbiter/tree/HEAD/listener_clients/TTGO_T-listener">TTGO T-Display</a></h3>
+        <p>A cheap ESP32 board with a built-in colour LCD that shows the device name alongside the state.</p>
+        <span class="card-tag">ESP32</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon card-icon--pvw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="9" width="16" height="6" rx="1.5"/><path d="M7 9V6.5M11 9V6.5M15 9V6.5M18 9V6.5"/></svg></span>
+        <h3><a href="https://github.com/josephdadams/TallyArbiter/tree/HEAD/listener_clients/pimoroni-blinkt-listener">Pimoroni Blinkt!</a></h3>
+        <p>Eight bright RGB LEDs straight onto a Raspberry Pi's GPIO header. No soldering required.</p>
+        <span class="card-tag">Raspberry Pi</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon card-icon--pgm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h7l3 4h6M4 16h7"/><circle cx="4" cy="8" r="1.5"/><circle cx="4" cy="16" r="1.5"/></svg></span>
+        <h3><a href="https://github.com/josephdadams/TallyArbiter/tree/HEAD/listener_clients/relay-listener">USB relays</a></h3>
+        <p>Close a contact for the camera CCUs and legacy tally systems that expect one. The bridge between modern software and old iron.</p>
+        <span class="card-tag">Contact closure</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon card-icon--pgm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 8h.01M9 12h.01M9 16h.01M13 8h2M13 12h2M13 16h2"/></svg></span>
+        <h3><a href="https://github.com/josephdadams/TallyArbiter/tree/HEAD/listener_clients/gpo-listener">GPO pins</a></h3>
+        <p>Drive GPIO outputs from a Raspberry Pi for logic control, LED drivers, or anything else that takes a pin going high.</p>
+        <span class="card-tag">Raspberry Pi</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M3 11h18M8 20h8"/></svg></span>
+        <h3><a href="https://josephdadams.github.io/TallyArbiter/docs/usage/sections/tsl">TSL &amp; vMix clients</a></h3>
+        <p>Tally Arbiter speaks TSL 3.1 out and emulates a vMix server, so multiviewers, UMDs and third-party vMix tally lights work unchanged.</p>
+        <span class="card-tag">Protocol</span>
+      </article>
+
+      <article class="card card--link reveal">
+        <span class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v5M12 16v5M5.6 5.6l3.5 3.5M14.9 14.9l3.5 3.5M3 12h5M16 12h5M5.6 18.4l3.5-3.5M14.9 9.1l3.5-3.5"/></svg></span>
+        <h3><a href="https://josephdadams.github.io/TallyArbiter/docs/developers/own-listener-client">Roll your own</a></h3>
+        <p>The listener protocol is documented. If it has a network stack and an LED, you can make it a tally light.</p>
+        <span class="card-tag">DIY</span>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!--==========================================================================
+  Supported systems
+===========================================================================-->
+<section class="section section--alt" id="supported">
+  <div class="wrap">
+
+    <header class="section-head">
+      <span class="eyebrow">Supported gear</span>
+      <h2>Sixteen source types, and counting</h2>
+      <p>
+        If your switcher speaks TSL UMD 3.1 or 5.0, it already works &mdash; even if
+        it isn't named here. New source types arrive regularly, often because
+        someone asked.
+      </p>
+    </header>
+
+    <div class="systems">
+
+      <div class="system reveal">
+        <h3>Analog Way <span>2 types</span></h3>
+        <ul>
+          <li>Ascender 16 / 32 / 48 &mdash; 4K</li>
+          <li>NeXtage 08 / 16 &mdash; 4K</li>
+          <li>LivePremier</li>
+          <li>Aquilon</li>
+          <li class="is-note">LivePremier and Aquilon need firmware 6.1.60 or later.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Blackmagic Design <span>2 types</span></h3>
+        <ul>
+          <li>ATEM Mini &middot; Pro &middot; Pro ISO &middot; Extreme</li>
+          <li>ATEM Television Studio &amp; Pro HD / 4K</li>
+          <li>ATEM 1 / 2 / 4 M/E Production Studio</li>
+          <li>ATEM Constellation 8K</li>
+          <li>Smart VideoHub 12&times;12 &rarr; 40&times;40</li>
+          <li>Universal VideoHub 72&times;72 &amp; 288&times;288</li>
+          <li class="is-note">The ATEM allows only 5 simultaneous connections.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Ross Video <span>2 types</span></h3>
+        <ul>
+          <li>Carbonite &middot; Black &middot; Black Solo &middot; Ultra</li>
+          <li>Acuity</li>
+          <li>Graphite</li>
+          <li>TouchDrive</li>
+          <li>Vision</li>
+          <li class="is-note">Carbonite gets per-bus handling; Vision uses Contribution Tally.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Software switchers <span>3 types</span></h3>
+        <ul>
+          <li>OBS Studio</li>
+          <li>StudioCoast vMix</li>
+          <li>Riedel SimplyLive</li>
+          <li class="is-note">OBS v28+ includes obs-websocket; watch for a port clash on 4455.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>NewTek <span>1 type</span></h3>
+        <ul>
+          <li>Tricaster TC1</li>
+          <li>Tricaster Mini</li>
+          <li class="is-note">Any NewTek product supporting their Tally over Ethernet protocol.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Panasonic <span>1 type</span></h3>
+        <ul>
+          <li>AV-HS410</li>
+          <li>AV-HS6000</li>
+          <li class="is-note">Requires multicast on the same subnet as Tally Arbiter.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Roland <span>2 types</span></h3>
+        <ul>
+          <li>V-60HD</li>
+          <li>XS-62S</li>
+          <li>VR-50HD-MKII</li>
+          <li class="is-note">Plus any Roland product offering Smart Tally.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Grass Valley <span>1 type</span></h3>
+        <ul>
+          <li>Contribution Tally Protocol</li>
+          <li class="is-note">The older GV protocol, over TCP or UDP.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>DataVideo <span>1 type</span></h3>
+        <ul>
+          <li>DataVideo IP tally</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>FOR-A <span>via TSL</span></h3>
+        <ul>
+          <li>HVS-490</li>
+          <li>HVS-1200 &middot; 2000 &middot; 6000</li>
+          <li class="is-note">Any FOR-A product supporting TSL UMD 5.0 over Ethernet.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Open protocols <span>3 types</span></h3>
+        <ul>
+          <li>TSL UMD 3.1 &mdash; UDP or TCP</li>
+          <li>TSL UMD 5.0 &mdash; UDP or TCP</li>
+          <li>Open Sound Control (OSC)</li>
+          <li>Incoming webhooks</li>
+          <li class="is-note">Anything that can send a UDP packet or an HTTP request can be a source.</li>
+        </ul>
+      </div>
+
+      <div class="system reveal">
+        <h3>Not listed? <span>&nbsp;</span></h3>
+        <ul>
+          <li class="is-note" style="font-style:normal">
+            Most switchers can emit TSL UMD, which Tally Arbiter accepts directly.
+            If yours can't, open an issue &mdash; new source types are added
+            regularly, and the source interface is small enough to write yourself.
+          </li>
+        </ul>
+        <a class="btn btn--ghost btn--sm" style="margin-top:14px" href="https://github.com/josephdadams/TallyArbiter/issues">Request a switcher</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!--==========================================================================
+  Install
+===========================================================================-->
+<section class="section" id="install">
+  <div class="wrap">
+
+    <header class="section-head">
+      <span class="eyebrow">Install</span>
+      <h2>Running in about five minutes</h2>
+      <p>Three ways in. The desktop app is the shortest path if you just want it working today.</p>
+    </header>
+
+    <div class="install">
+
+      <div class="install-card is-featured reveal">
+        <span class="badge">Recommended</span>
+        <h3>Desktop app</h3>
+        <p>
+          Installers for macOS, Windows and Linux. Double-click, and the
+          server plus its settings interface start together &mdash; no runtime to
+          install first.
+        </p>
+        <a class="btn btn--primary" href="https://github.com/josephdadams/TallyArbiter/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
+          <span>Download latest</span>
+        </a>
+      </div>
+
+      <div class="install-card reveal">
+        <h3>Command line</h3>
+        <p>
+          Install globally from npm. Best for a headless Raspberry Pi or a server
+          you want to start on boot. Needs Node.js 18.13 or newer.
+        </p>
+        <div class="code">
+          <span class="prompt">$</span>
+          <pre><code>npm install -g tallyarbiter</code></pre>
+          <button class="copy-btn" type="button" data-copy="npm install -g tallyarbiter" aria-label="Copy command">
+            <svg class="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+            <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="install-card reveal">
+        <h3>Docker</h3>
+        <p>
+          An official image on Docker Hub, plus a <code>docker-compose.yml</code>
+          in the repository. Bring it up and it stays up.
+        </p>
+        <div class="code">
+          <span class="prompt">$</span>
+          <pre><code>docker compose up -d</code></pre>
+          <button class="copy-btn" type="button" data-copy="docker compose up -d" aria-label="Copy command">
+            <svg class="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+            <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <p style="text-align:center;margin-top:34px;color:var(--text-muted);font-size:0.95rem">
+      Building from source, running it as a service, or configuring the settings
+      interface &mdash; it's all in the
+      <a href="https://josephdadams.github.io/TallyArbiter/docs/installation/desktop-app">installation documentation</a>.
+    </p>
+
+  </div>
+</section>
+
+<!--==========================================================================
+  Videos
+===========================================================================-->
+<section class="section section--alt" id="videos">
+  <div class="wrap">
+
+    <header class="section-head">
+      <span class="eyebrow">Watch it work</span>
+      <h2>Walkthroughs and setup guides</h2>
+      <p>Videos load only when you press play, so nothing phones home until you ask it to.</p>
+    </header>
+
+    <div class="videos">
+
+      <article class="video reveal">
+        <button class="video-embed" type="button" data-video="msfAL631ARw" aria-label="Play: Introduction and walkthrough">
+          <img src="img/videos/msfAL631ARw.jpg" alt="" loading="lazy" width="640" height="360">
+          <span class="play"><svg viewBox="0 0 68 48" aria-hidden="true"><path d="M66.5 7.7a8.6 8.6 0 0 0-6-6C55.2 0 34 0 34 0S12.8 0 7.5 1.7a8.6 8.6 0 0 0-6 6A90 90 0 0 0 0 24a90 90 0 0 0 1.5 16.3 8.6 8.6 0 0 0 6 6C12.8 48 34 48 34 48s21.2 0 26.5-1.7a8.6 8.6 0 0 0 6-6A90 90 0 0 0 68 24a90 90 0 0 0-1.5-16.3z" fill="#f00"/><path d="M27 34.5L45.5 24 27 13.5z" fill="#fff"/></svg></span>
+        </button>
+        <div class="video-body">
+          <h3>Introduction and walkthrough</h3>
+          <p>The whole system end to end &mdash; what it does and why it exists.</p>
+        </div>
+      </article>
+
+      <article class="video reveal">
+        <button class="video-embed" type="button" data-video="dOHPXS1ZeSU" aria-label="Play: Setting up with OBS Studio">
+          <img src="img/videos/dOHPXS1ZeSU.jpg" alt="" loading="lazy" width="640" height="360">
+          <span class="play"><svg viewBox="0 0 68 48" aria-hidden="true"><path d="M66.5 7.7a8.6 8.6 0 0 0-6-6C55.2 0 34 0 34 0S12.8 0 7.5 1.7a8.6 8.6 0 0 0-6 6A90 90 0 0 0 0 24a90 90 0 0 0 1.5 16.3 8.6 8.6 0 0 0 6 6C12.8 48 34 48 34 48s21.2 0 26.5-1.7a8.6 8.6 0 0 0 6-6A90 90 0 0 0 68 24a90 90 0 0 0-1.5-16.3z" fill="#f00"/><path d="M27 34.5L45.5 24 27 13.5z" fill="#fff"/></svg></span>
+        </button>
+        <div class="video-body">
+          <h3>Setting up with OBS Studio</h3>
+          <p>A from-scratch install, wired up to OBS &mdash; a good first watch.</p>
+        </div>
+      </article>
+
+      <article class="video reveal">
+        <button class="video-embed" type="button" data-video="iZd0_K21k6U" aria-label="Play: TSL 3.1 protocol conversion">
+          <img src="img/videos/iZd0_K21k6U.jpg" alt="" loading="lazy" width="640" height="360">
+          <span class="play"><svg viewBox="0 0 68 48" aria-hidden="true"><path d="M66.5 7.7a8.6 8.6 0 0 0-6-6C55.2 0 34 0 34 0S12.8 0 7.5 1.7a8.6 8.6 0 0 0-6 6A90 90 0 0 0 0 24a90 90 0 0 0 1.5 16.3 8.6 8.6 0 0 0 6 6C12.8 48 34 48 34 48s21.2 0 26.5-1.7a8.6 8.6 0 0 0 6-6A90 90 0 0 0 68 24a90 90 0 0 0-1.5-16.3z" fill="#f00"/><path d="M27 34.5L45.5 24 27 13.5z" fill="#fff"/></svg></span>
+        </button>
+        <div class="video-body">
+          <h3>TSL 3.1 protocol conversion</h3>
+          <p>Take tally from any supported source and relay it to TSL clients and multiviewers.</p>
+        </div>
+      </article>
+
+      <article class="video reveal">
+        <button class="video-embed" type="button" data-video="yvWg1NuH248" aria-label="Play: Tally Arbiter Cloud">
+          <img src="img/videos/yvWg1NuH248.jpg" alt="" loading="lazy" width="640" height="360">
+          <span class="play"><svg viewBox="0 0 68 48" aria-hidden="true"><path d="M66.5 7.7a8.6 8.6 0 0 0-6-6C55.2 0 34 0 34 0S12.8 0 7.5 1.7a8.6 8.6 0 0 0-6 6A90 90 0 0 0 0 24a90 90 0 0 0 1.5 16.3 8.6 8.6 0 0 0 6 6C12.8 48 34 48 34 48s21.2 0 26.5-1.7a8.6 8.6 0 0 0 6-6A90 90 0 0 0 68 24a90 90 0 0 0-1.5-16.3z" fill="#f00"/><path d="M27 34.5L45.5 24 27 13.5z" fill="#fff"/></svg></span>
+        </button>
+        <div class="video-body">
+          <h3>Tally Arbiter Cloud</h3>
+          <p>Send tally out of a closed production network to anywhere in the world.</p>
+        </div>
+      </article>
+
+      <article class="video reveal">
+        <button class="video-embed" type="button" data-video="osvbW4XHu0I" aria-label="Play: Control with Bitfocus Companion">
+          <img src="img/videos/osvbW4XHu0I.jpg" alt="" loading="lazy" width="640" height="360">
+          <span class="play"><svg viewBox="0 0 68 48" aria-hidden="true"><path d="M66.5 7.7a8.6 8.6 0 0 0-6-6C55.2 0 34 0 34 0S12.8 0 7.5 1.7a8.6 8.6 0 0 0-6 6A90 90 0 0 0 0 24a90 90 0 0 0 1.5 16.3 8.6 8.6 0 0 0 6 6C12.8 48 34 48 34 48s21.2 0 26.5-1.7a8.6 8.6 0 0 0 6-6A90 90 0 0 0 68 24a90 90 0 0 0-1.5-16.3z" fill="#f00"/><path d="M27 34.5L45.5 24 27 13.5z" fill="#fff"/></svg></span>
+        </button>
+        <div class="video-body">
+          <h3>Control with Bitfocus Companion</h3>
+          <p>Live tally feedback on Stream Deck keys, and flashing a client from the surface.</p>
+        </div>
+      </article>
+
+      <article class="video reveal">
+        <button class="video-embed" type="button" data-video="WMrRKD63Jrw" aria-label="Play: M5StickC Arduino tally">
+          <img src="img/videos/WMrRKD63Jrw.jpg" alt="" loading="lazy" width="640" height="360">
+          <span class="play"><svg viewBox="0 0 68 48" aria-hidden="true"><path d="M66.5 7.7a8.6 8.6 0 0 0-6-6C55.2 0 34 0 34 0S12.8 0 7.5 1.7a8.6 8.6 0 0 0-6 6A90 90 0 0 0 0 24a90 90 0 0 0 1.5 16.3 8.6 8.6 0 0 0 6 6C12.8 48 34 48 34 48s21.2 0 26.5-1.7a8.6 8.6 0 0 0 6-6A90 90 0 0 0 68 24a90 90 0 0 0-1.5-16.3z" fill="#f00"/><path d="M27 34.5L45.5 24 27 13.5z" fill="#fff"/></svg></span>
+        </button>
+        <div class="video-body">
+          <h3>M5StickC Arduino tally</h3>
+          <p>A portable ESP32 tally light, in action on a camera.</p>
+        </div>
+      </article>
+
+    </div>
+
+    <p style="text-align:center;margin-top:34px;color:var(--text-muted);font-size:0.95rem">
+      More on the <a href="https://www.youtube.com/@techministryblog">Tech Ministry YouTube channel</a>.
+    </p>
+
+  </div>
+</section>
+
+<!--==========================================================================
+  Testimonials
+===========================================================================-->
+<section class="section" id="testimonials">
+  <div class="wrap">
+
+    <header class="section-head">
+      <span class="eyebrow">From the field</span>
+      <h2>What people are saying</h2>
+    </header>
+
+    <div class="quotes">
+
+      <blockquote class="quote reveal">
+        <p>This is by far the most flexible Tally solution available.</p>
+      </blockquote>
+
+      <blockquote class="quote reveal">
+        <p>It works flawlessly, we really can't thank you enough for your hard work on this, and generosity in distributing it under the MIT License.</p>
+      </blockquote>
+
+      <blockquote class="quote reveal">
+        <p>Thanks for sharing!! We're a small church on a budget and I've been trying to find a way I could set up tally on our ATEM Mini without breaking the bank. You sir, are a scholar and a gentleman!</p>
+      </blockquote>
+
+      <blockquote class="quote reveal">
+        <p>It's so good! You're incredibly generous to offer this up for other churches to use. Happier volunteers, more coordinated direction, more comprehensive worship experience, more attention on God. Thanks for doing this!</p>
+      </blockquote>
+
+      <blockquote class="quote reveal">
+        <p>This is so awesome! I have been searching endlessly for a solution like this. I am no programmer but read through your detailed instructions and decided to give it a shot. Just ordered everything. Thanks for working on this, this will really help out our church.</p>
+      </blockquote>
+
+      <blockquote class="quote reveal">
+        <p>Great work on this project! Huge blessing!</p>
+      </blockquote>
+
+      <blockquote class="quote reveal">
+        <p>This is awesome! Well done and thanks for sharing!</p>
+      </blockquote>
+
+      <blockquote class="quote reveal">
+        <p>Love this! Will definitely be testing this out this week and hope to implement it soon! Love all that you do on this blog, huge inspiration!</p>
+      </blockquote>
+
+    </div>
+  </div>
+</section>
+
+<!--==========================================================================
+  Author
+===========================================================================-->
+<section class="section section--alt" id="about">
+  <div class="wrap">
+
+    <header class="section-head">
+      <span class="eyebrow">The project</span>
+      <h2>Written for one church, given to everyone</h2>
+    </header>
+
+    <div class="author reveal">
+      <img src="img/josephadams.jpg" alt="Joseph Adams" width="132" height="132" loading="lazy">
+      <div>
+        <blockquote>
+          &ldquo;I wrote this software because we needed a tally system at my church,
+          but I released it open source because I wanted a low-cost and flexible
+          tally light solution to be available to anyone who needs it.&rdquo;
+        </blockquote>
+        <div class="name">Joseph Adams</div>
+        <div class="role">Creator and maintainer</div>
+        <ul class="author-links">
+          <li><a class="btn btn--ghost btn--sm" href="https://github.com/josephdadams/">GitHub</a></li>
+          <li><a class="btn btn--ghost btn--sm" href="https://techministry.blog">techministry.blog</a></li>
+          <li><a class="btn btn--ghost btn--sm" href="https://github.com/sponsors/josephdadams">Sponsor the project</a></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!--==========================================================================
+  Closing CTA
+===========================================================================-->
+<section class="cta-band">
+  <div class="wrap">
+    <h2>Give your camera operators a light they can trust.</h2>
+    <p>
+      Free, MIT licensed, and running in productions from single-camera church
+      streams to multi-switcher broadcast facilities.
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn--primary" href="https://github.com/josephdadams/TallyArbiter/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
+        <span>Download Tally Arbiter</span>
+      </a>
+      <a class="btn btn--ghost" href="https://github.com/josephdadams/TallyArbiter">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.6 5.6.6 12a11.4 11.4 0 0 0 7.8 10.8c.6.1.8-.2.8-.6v-2c-3.2.7-3.8-1.4-3.8-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.2 1.7 1.2 1 1.7 2.7 1.2 3.4.9.1-.7.4-1.2.7-1.5-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.3 11.3 0 0 1 6 0C17.6 4.7 18.6 5 18.6 5c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6A11.4 11.4 0 0 0 23.4 12C23.4 5.6 18.3.5 12 .5z"/></svg>
+        <span>Star it on GitHub</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!--==========================================================================
+  Footer
+===========================================================================-->
+<footer class="site-footer">
+  <div class="wrap">
+
+    <div class="footer-grid">
+      <div class="footer-about">
+        <a class="logo-lockup" href="#top" aria-label="Tally Arbiter — home">
+          <svg class="mark" viewBox="0 0 52 64" aria-hidden="true"><use href="#mark"></use></svg>
+          <span class="wordmark">Tally Arbiter</span>
+        </a>
+        <p>
+          A camera tally light system that aggregates tally data from multiple
+          sources and video switchers, arbitrates Preview and Program states, and
+          drives whatever hardware you point it at.
+        </p>
+      </div>
+
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/josephdadams/TallyArbiter">Source on GitHub</a></li>
+          <li><a href="https://github.com/josephdadams/TallyArbiter/releases/latest">Releases</a></li>
+          <li><a href="https://github.com/josephdadams/TallyArbiter/issues">Issues</a></li>
+          <li><a href="https://hub.docker.com/r/josephdadams/tallyarbiter">Docker Hub</a></li>
+          <li><a href="https://www.npmjs.com/package/tallyarbiter">npm package</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Documentation</h4>
+        <ul>
+          <li><a href="https://josephdadams.github.io/TallyArbiter/docs/intro">Introduction</a></li>
+          <li><a href="https://josephdadams.github.io/TallyArbiter/docs/installation/desktop-app">Installation</a></li>
+          <li><a href="https://josephdadams.github.io/TallyArbiter/docs/usage/sections/sources">Sources</a></li>
+          <li><a href="https://josephdadams.github.io/TallyArbiter/docs/usage/sections/listener-clients">Listener clients</a></li>
+          <li><a href="https://josephdadams.github.io/TallyArbiter/docs/developers/rest-api">REST API</a></li>
+          <li><a href="https://josephdadams.github.io/TallyArbiter/docs/usage/troubleshooting">Troubleshooting</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Support the work</h4>
+        <ul>
+          <li><a href="https://github.com/sponsors/josephdadams">GitHub Sponsors</a></li>
+          <li><a href="https://www.paypal.me/adamsfamilyadopts">PayPal</a></li>
+          <li><a href="https://techministry.blog">techministry.blog</a></li>
+          <li><a href="https://bitfocus.io/companion">Bitfocus Companion</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>&copy; <span id="year">2026</span> Joseph Adams. Released under the MIT License.</span>
+      <span>Product names and trademarks belong to their respective owners.</span>
+    </div>
+
+  </div>
+</footer>
+
+<a class="to-top" id="to-top" href="#top" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</a>
+
+<script src="js/main.js" defer></script>
+</body>
+</html>
