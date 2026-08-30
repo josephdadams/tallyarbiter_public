@@ -33,8 +33,8 @@ REGISTER_RE = re.compile(
 token = os.environ.get("GH_TOKEN", "")
 
 ISSUE_BODY = """\
-`src/sources` in [josephdadams/TallyArbiter](https://github.com/josephdadams/TallyArbiter/tree/HEAD/src/sources)
-now registers **{actual}** selectable source types. The Supported gear section of
+`src/sources` at the latest release registers **{actual}** selectable source
+types. The Supported gear section of
 `index.html` declares **{declared}**.
 
 This is reported rather than corrected automatically, because placing a new
@@ -81,15 +81,25 @@ def latest_version():
     return ".".join(parts[:2]), full
 
 
-def registered_source_types():
-    """Every selectable source type the upstream code registers."""
-    listing = _get(f"https://api.github.com/repos/{UPSTREAM}/contents/src/sources")
+def registered_source_types(ref):
+    """Every selectable source type registered at `ref`.
+
+    Read at the release tag, not the default branch. Source types land on main
+    ahead of a release, and the site describes what people can actually
+    download — counting main would advertise sources nobody has yet.
+    """
+    listing = _get(
+        f"https://api.github.com/repos/{UPSTREAM}/contents/src/sources?ref={ref}"
+    )
     found = {}
     for entry in listing:
         name = entry.get("name", "")
         if not name.endswith(".ts") or name in SKIP_FILES:
             continue
-        body = _get(entry["download_url"], as_json=False)
+        body = _get(
+            f"https://raw.githubusercontent.com/{UPSTREAM}/{ref}/src/sources/{name}",
+            as_json=False,
+        )
         for type_id, label in REGISTER_RE.findall(body):
             if type_id in SKIP_IDS:
                 continue
@@ -123,7 +133,7 @@ def set_output(**pairs):
 def main():
     try:
         display, full = latest_version()
-        types = registered_source_types()
+        types = registered_source_types(f"v{full}")
     except (urllib.error.URLError, urllib.error.HTTPError, ValueError, KeyError) as exc:
         print(f"::error::could not read {UPSTREAM}: {exc}")
         return 1
