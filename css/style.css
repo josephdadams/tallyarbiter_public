@@ -930,6 +930,60 @@ code, kbd, pre { font-family: var(--font-mono); }
 .copy-btn.is-copied .icon-copy { display: none; }
 
 /* --------------------------------------------------------------------------
+   12b. Documentation hub
+   -------------------------------------------------------------------------- */
+
+.docs-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.doccard {
+  padding: 24px 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.doccard h3 {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doccard ul { list-style: none; }
+.doccard li + li { border-top: 1px solid var(--border); }
+
+.doccard a {
+  display: block;
+  padding: 12px 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+}
+.doccard a:hover { color: var(--brand); text-decoration: none; }
+
+/* The descriptor says what the page is for, so someone picks the right one
+   instead of landing on the intro and hunting. */
+.doccard a span {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.docs-cta { text-align: center; margin-top: 34px; }
+
+/* --------------------------------------------------------------------------
    13. Videos
    -------------------------------------------------------------------------- */
 
