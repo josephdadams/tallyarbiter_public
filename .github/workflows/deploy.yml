@@ -3,16 +3,18 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # Daily check against the TallyArbiter repo so the site does not drift.
+  # Offset from the hour — runs scheduled at :00 queue behind everyone else's.
+  schedule:
+    - cron: '17 9 * * *'
   workflow_dispatch:
 
-# The deploy job needs these to publish; nothing else in the repo does.
 permissions:
-  contents: read
+  contents: write   # the sync step commits version bumps
+  issues: write     # ...and files a report when the source count moves
   pages: write
   id-token: write
 
-# Never let two deploys race, but let an in-flight one finish rather than
-# cancelling it partway.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -28,11 +30,53 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
+      # Runs on the schedule and on manual dispatch, but not on a plain push —
+      # a push means someone edited the site by hand, and there is nothing to sync.
+      #
+      # This deliberately lives in the same job as the deploy: commits made with
+      # GITHUB_TOKEN do not trigger workflows, so a separate sync job that pushed
+      # would never cause a deploy. Here the staging step below just picks up the
+      # edited working tree.
+      - name: Sync with upstream TallyArbiter
+        id: sync
+        if: github.event_name != 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/sync_upstream.py
+
+      - name: Commit version bump
+        if: steps.sync.outputs.version_changed == 'true'
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m "Update site to Tally Arbiter v${{ steps.sync.outputs.version_full }}"
+          git push
+
+      # The count is reported, never rewritten: deciding whether a new source
+      # type belongs under an existing manufacturer card or needs its own is an
+      # editorial call. The body was written to drift-issue.md by the script.
+      - name: Report source-type drift
+        if: steps.sync.outputs.types_drifted == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTUAL: ${{ steps.sync.outputs.types_actual }}
+        run: |
+          existing=$(gh issue list --state open \
+                       --search 'in:title Supported gear is out of date' \
+                       --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "Already tracked in #${existing}; not opening another."
+            exit 0
+          fi
+          gh issue create \
+            --title "Supported gear is out of date: upstream registers ${ACTUAL} source types" \
+            --body-file drift-issue.md
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      # The site is plain static files at the repo root — no build step. Copy
-      # everything except repo plumbing into the artifact directory.
+      # The site is plain static files at the repo root — no build step.
       - name: Stage the site
         run: |
           mkdir -p _site
@@ -41,6 +85,7 @@ jobs:
             --exclude='.github' \
             --exclude='.claude' \
             --exclude='_site' \
+            --exclude='drift-issue.md' \
             ./ _site/
           echo "Staged $(find _site -type f | wc -l) files, $(du -sh _site | cut -f1)"
 

@@ -18,3 +18,6 @@ Desktop.ini
 # and decoration images, left on disk after the 2026 rebuild. Not part of the
 # site. Delete the folder when you no longer want them around.
 _unused/
+
+# Written by the sync workflow when the source count drifts; never committed.
+drift-issue.md
